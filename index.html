@@ -10,7 +10,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .container { max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem; }
 header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 12px; }
 h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
-.top-actions { display: flex; gap: 8px; align-items: center; }
+.top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 select { font-size: 14px; padding: 7px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; cursor: pointer; outline: none; }
 select:focus { border-color: #1D9E75; }
 .btn { font-size: 13px; padding: 7px 16px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
@@ -18,8 +18,6 @@ select:focus { border-color: #1D9E75; }
 .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 .btn-primary:hover { background: #333; }
 .btn-sm { font-size: 12px; padding: 5px 12px; }
-.btn-danger { color: #E24B4A; border-color: #fcc; }
-.btn-danger:hover { background: #fff5f5; }
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
 .sum-card { background: #fff; border-radius: 10px; padding: 1rem 1.1rem; border: 1px solid #ebebea; }
 .sum-label { font-size: 12px; color: #888; margin-bottom: 5px; }
@@ -33,10 +31,9 @@ select:focus { border-color: #1D9E75; }
 .icon-btn:hover { background: #f5f5f3; color: #555; }
 .icon-btn.del:hover { color: #E24B4A; background: #fff5f5; }
 .budget-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; font-size: 13px; color: #888; }
-.pct-label { font-weight: 600; }
-.pct-ok { color: #1D9E75; }
-.pct-warn { color: #EF9F27; }
-.pct-over { color: #E24B4A; }
+.pct-ok { color: #1D9E75; font-weight: 600; }
+.pct-warn { color: #EF9F27; font-weight: 600; }
+.pct-over { color: #E24B4A; font-weight: 600; }
 .bar-bg { width: 100%; height: 8px; background: #f0f0ee; border-radius: 99px; overflow: hidden; margin-bottom: 10px; }
 .bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
 .bar-ok { background: #1D9E75; }
@@ -66,18 +63,30 @@ select:focus { border-color: #1D9E75; }
 .modal input { width: 100%; font-size: 14px; padding: 8px 11px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; outline: none; }
 .modal input:focus { border-color: #1D9E75; }
 .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.status-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #aaa; margin-bottom: 1rem; min-height: 20px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
+.dot.syncing { background: #EF9F27; animation: pulse 1s infinite; }
+.dot.error { background: #E24B4A; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.loading-overlay { position: fixed; inset: 0; background: rgba(245,245,243,0.9); display: flex; align-items: center; justify-content: center; z-index: 200; font-size: 14px; color: #888; gap: 10px; }
+.spinner { width: 20px; height: 20px; border: 2px solid #ddd; border-top-color: #1D9E75; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 520px) {
-  .summary { grid-template-columns: repeat(3, 1fr); }
   .sum-val { font-size: 16px; }
-  .add-row { grid-template-columns: 1fr 1fr; }
-  .add-row input:first-child { grid-column: 1; }
-  .add-row input:nth-child(2) { grid-column: 2; }
+  .entry-row { grid-template-columns: 78px 1fr auto 24px 24px; }
+  .add-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
   .add-row input:nth-child(3) { grid-column: 1; }
   .add-row .btn { grid-column: 2; }
 }
 </style>
 </head>
 <body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <span>불러오는 중...</span>
+</div>
+
 <div class="container">
   <header>
     <h1>📊 광고비 트래커</h1>
@@ -87,11 +96,18 @@ select:focus { border-color: #1D9E75; }
       <button class="btn btn-primary" onclick="openAddClient()">+ 추가</button>
     </div>
   </header>
+
+  <div class="status-bar">
+    <div class="dot syncing" id="statusDot"></div>
+    <span id="statusText">연결 중...</span>
+  </div>
+
   <div class="summary">
     <div class="sum-card"><div class="sum-label">총 할당 예산</div><div class="sum-val" id="sTotal">-</div></div>
     <div class="sum-card"><div class="sum-label">총 소진액</div><div class="sum-val" id="sSpent">-</div></div>
     <div class="sum-card"><div class="sum-label">총 잔여액</div><div class="sum-val" id="sRemain">-</div></div>
   </div>
+
   <div class="clients" id="clientList"></div>
 </div>
 
@@ -109,147 +125,293 @@ select:focus { border-color: #1D9E75; }
   </div>
 </div>
 
-<script>
-const KEY = 'adtracker_v3';
-let data = {}, currentMonth = '', editingClientId = null, editingEntryKey = null;
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-const fmt = n => Number(n).toLocaleString('ko-KR') + '원';
-const pct = (s, b) => !b ? 0 : Math.min(100, Math.round(s / b * 100));
-const today = () => new Date().toISOString().slice(0, 10);
-const load = () => { try { data = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { data = {}; } };
-const save = () => localStorage.setItem(KEY, JSON.stringify(data));
+const firebaseConfig = {
+  apiKey: "AIzaSyDbQyY3lodZ56TWAub7aeI2y-VXYMPApzc",
+  authDomain: "adfee-87b3e.firebaseapp.com",
+  projectId: "adfee-87b3e",
+  storageBucket: "adfee-87b3e.firebasestorage.app",
+  messagingSenderId: "390347281110",
+  appId: "1:390347281110:web:736f64070539e77a612f77"
+};
 
-function getMonths() {
-  const now = new Date(), months = [];
-  for (let i = -3; i <= 4; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    months.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
-  }
-  return months;
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+let currentMonth   = '';
+let clients        = [];
+let entries        = {};
+let editingClientId  = null;
+let editingEntryKey  = null;
+let unsubscribes   = [];
+
+const fmt   = n => Number(n).toLocaleString('ko-KR') + '원';
+const pct   = (s,b) => !b ? 0 : Math.min(100, Math.round(s/b*100));
+const today = () => new Date().toISOString().slice(0,10);
+const uid   = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+function setStatus(state, text) {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.className = 'dot' + (state==='syncing' ? ' syncing' : state==='error' ? ' error' : '');
+  txt.textContent = text;
 }
 
 function initMonthSel() {
   const sel = document.getElementById('monthSel');
-  const months = getMonths();
   const now = new Date();
   currentMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
-  sel.innerHTML = months.map(m => `<option value="${m}" ${m===currentMonth?'selected':''}>${m.replace('-','년 ')}월</option>`).join('');
-  sel.onchange = () => { currentMonth = sel.value; editingEntryKey = null; render(); };
+  const months = [];
+  const start = new Date(2020, 0, 1);
+  const end   = new Date(now.getFullYear() + 5, 11, 1);
+  for (let d = new Date(start); d <= end; d.setMonth(d.getMonth()+1)) {
+    months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  months.reverse();
+  sel.innerHTML = months.map(m =>
+    `<option value="${m}" ${m===currentMonth?'selected':''}>${m.replace('-','년 ')}월</option>`
+  ).join('');
+  sel.onchange = () => { currentMonth = sel.value; editingEntryKey = null; subscribeMonth(); };
+}
+
+function subscribeMonth() {
+  unsubscribes.forEach(u => u());
+  unsubscribes = [];
+  clients = [];
+  entries = {};
+  render();
+  setStatus('syncing', '동기화 중...');
+
+  const clientsRef = collection(db, 'months', currentMonth, 'clients');
+
+  const unsub = onSnapshot(clientsRef, snap => {
+    clients = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a,b) => (a.order||0) - (b.order||0));
+
+    // entries 구독은 새 클라이언트에만 추가
+    const existingIds = new Set(Object.keys(entries));
+    clients.forEach(c => {
+      if (existingIds.has(c.id)) return;
+      const entRef = collection(db, 'months', currentMonth, 'clients', c.id, 'entries');
+      const eu = onSnapshot(entRef, esnap => {
+        entries[c.id] = esnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a,b) => a.date.localeCompare(b.date));
+        render();
+      });
+      unsubscribes.push(eu);
+    });
+
+    document.getElementById('loadingOverlay').style.display = 'none';
+    setStatus('ok', '실시간 동기화됨');
+    render();
+  }, () => {
+    setStatus('error', '연결 오류 — 새로고침 해주세요');
+    document.getElementById('loadingOverlay').style.display = 'none';
+  });
+
+  unsubscribes = [unsub];
 }
 
 function render() {
-  const md = data[currentMonth] || [];
-  let tb = 0, ts = 0;
-  md.forEach(c => { tb += +c.budget||0; ts += (c.entries||[]).reduce((a,e) => a+(+e.amt||0), 0); });
-  document.getElementById('sTotal').textContent = fmt(tb);
-  document.getElementById('sSpent').textContent = fmt(ts);
-  document.getElementById('sRemain').textContent = fmt(tb - ts);
+  let tb=0, ts=0;
+  clients.forEach(c => {
+    tb += +c.budget||0;
+    ts += (entries[c.id]||[]).reduce((a,e) => a+(+e.amt||0), 0);
+  });
+  document.getElementById('sTotal').textContent  = fmt(tb);
+  document.getElementById('sSpent').textContent  = fmt(ts);
+  document.getElementById('sRemain').textContent = fmt(tb-ts);
 
   const list = document.getElementById('clientList');
-  if (!md.length) { list.innerHTML = '<div class="empty">클라이언트가 없습니다.<br>오른쪽 상단 <strong>+ 추가</strong> 버튼으로 등록해보세요.</div>'; return; }
+  if (!clients.length) {
+    list.innerHTML = '<div class="empty">클라이언트가 없습니다.<br>오른쪽 상단 <strong>+ 추가</strong> 버튼으로 등록해보세요.</div>';
+    return;
+  }
 
-  list.innerHTML = md.map((c, ci) => {
-    const spent = (c.entries||[]).reduce((a,e) => a+(+e.amt||0), 0);
-    const p = pct(spent, c.budget);
-    const cls = p>=100?'over':p>=80?'warn':'ok';
-    const eRows = (c.entries||[]).map((e, ei) => {
-      const ek = `${ci}_${ei}`;
+  list.innerHTML = clients.map(c => {
+    const ents  = entries[c.id] || [];
+    const spent = ents.reduce((a,e) => a+(+e.amt||0), 0);
+    const p     = pct(spent, c.budget);
+    const cls   = p>=100 ? 'over' : p>=80 ? 'warn' : 'ok';
+    const isOpen = c._open || false;
+
+    const eRows = ents.map((e,ei) => {
+      const ek = `${c.id}_${ei}`;
       if (editingEntryKey === ek) return `
         <div class="edit-row">
           <input type="date" id="ed_d_${ek}" value="${e.date}">
-          <input type="text" id="ed_m_${ek}" value="${e.memo||''}" placeholder="메모">
+          <input type="text"   id="ed_m_${ek}" value="${e.memo||''}" placeholder="메모">
           <input type="number" id="ed_a_${ek}" value="${e.amt}" min="0">
-          <button class="btn btn-primary btn-sm" onclick="saveEntry(${ci},${ei})">저장</button>
-          <button class="btn btn-sm" onclick="cancelEdit()">취소</button>
+          <button class="btn btn-primary btn-sm" onclick="window._saveEntry('${c.id}','${e.id}','${ek}')">저장</button>
+          <button class="btn btn-sm" onclick="window._cancelEdit()">취소</button>
         </div>`;
-      return `<div class="entry-row">
-        <span class="e-date">${e.date}</span>
-        <span class="e-memo">${e.memo||'-'}</span>
-        <span class="e-amt">${fmt(e.amt)}</span>
-        <button class="icon-btn" onclick="startEdit(${ci},${ei})" title="수정">✎</button>
-        <button class="icon-btn del" onclick="delEntry(${ci},${ei})" title="삭제">✕</button>
-      </div>`;
+      return `
+        <div class="entry-row">
+          <span class="e-date">${e.date}</span>
+          <span class="e-memo">${e.memo||'-'}</span>
+          <span class="e-amt">${fmt(e.amt)}</span>
+          <button class="icon-btn" onclick="window._startEdit('${c.id}',${ei},'${e.id}')">✎</button>
+          <button class="icon-btn del" onclick="window._delEntry('${c.id}','${e.id}')">✕</button>
+        </div>`;
     }).join('');
-    return `<div class="card">
-      <div class="card-header">
-        <span class="client-name">${c.name}</span>
-        <div class="card-actions">
-          <button class="icon-btn" onclick="openEditClient(${ci})">✎</button>
-          <button class="icon-btn del" onclick="deleteClient(${ci})">✕</button>
+
+    return `
+      <div class="card">
+        <div class="card-header">
+          <span class="client-name">${c.name}</span>
+          <div class="card-actions">
+            <button class="icon-btn" onclick="window._openEditClient('${c.id}')">✎</button>
+            <button class="icon-btn del" onclick="window._deleteClient('${c.id}','${c.name}')">✕</button>
+          </div>
         </div>
-      </div>
-      <div class="budget-row">
-        <span>소진 ${fmt(spent)} / 할당 ${fmt(c.budget)}</span>
-        <span class="pct-label pct-${cls}">${p}%</span>
-      </div>
-      <div class="bar-bg"><div class="bar-fill bar-${cls}" style="width:${p}%"></div></div>
-      <span class="toggle-link" onclick="toggleEntries(${ci})">${c._open?'▾':'▸'} 지출 내역 ${(c.entries||[]).length}건</span>
-      <div class="entries${c._open?' open':''}" id="ent_${ci}">
-        ${eRows||'<div style="font-size:13px;color:#aaa;padding:4px 0 8px;">내역 없음</div>'}
-        <div class="add-row">
-          <input type="date" id="eD_${ci}" value="${today()}">
-          <input type="text" id="eM_${ci}" placeholder="메모 (선택)">
-          <input type="number" id="eA_${ci}" placeholder="금액 (원)" min="0">
-          <button class="btn btn-primary btn-sm" onclick="addEntry(${ci})">+ 추가</button>
+        <div class="budget-row">
+          <span>소진 ${fmt(spent)} / 할당 ${fmt(c.budget)}</span>
+          <span class="pct-${cls}">${p}%</span>
         </div>
-      </div>
-    </div>`;
+        <div class="bar-bg"><div class="bar-fill bar-${cls}" style="width:${p}%"></div></div>
+        <span class="toggle-link" onclick="window._toggle('${c.id}')">
+          ${isOpen?'▾':'▸'} 지출 내역 ${ents.length}건
+        </span>
+        <div class="entries${isOpen?' open':''}">
+          ${eRows||'<div style="font-size:13px;color:#aaa;padding:4px 0 8px;">내역 없음</div>'}
+          <div class="add-row">
+            <input type="date"   id="eD_${c.id}" value="${today()}">
+            <input type="text"   id="eM_${c.id}" placeholder="메모 (선택)">
+            <input type="number" id="eA_${c.id}" placeholder="금액 (원)" min="0">
+            <button class="btn btn-primary btn-sm" onclick="window._addEntry('${c.id}')">+ 추가</button>
+          </div>
+        </div>
+      </div>`;
   }).join('');
 }
 
-function toggleEntries(ci) { data[currentMonth][ci]._open=!data[currentMonth][ci]._open; save(); render(); }
-function startEdit(ci,ei) { editingEntryKey=`${ci}_${ei}`; render(); document.getElementById(`ed_d_${editingEntryKey}`)?.focus(); }
-function cancelEdit() { editingEntryKey=null; render(); }
-function saveEntry(ci,ei) {
-  const ek=`${ci}_${ei}`;
-  const date=document.getElementById(`ed_d_${ek}`).value;
-  const memo=document.getElementById(`ed_m_${ek}`).value.trim();
-  const amt=+document.getElementById(`ed_a_${ek}`).value;
-  if(!date||!amt||amt<=0){alert('날짜와 금액을 입력해주세요.');return;}
-  data[currentMonth][ci].entries[ei]={date,memo,amt};
-  data[currentMonth][ci].entries.sort((a,b)=>a.date.localeCompare(b.date));
-  editingEntryKey=null; save(); render();
-}
-function addEntry(ci) {
-  const date=document.getElementById(`eD_${ci}`).value;
-  const memo=document.getElementById(`eM_${ci}`).value.trim();
-  const amt=+document.getElementById(`eA_${ci}`).value;
-  if(!date||!amt||amt<=0){alert('날짜와 금액을 입력해주세요.');return;}
-  if(!data[currentMonth][ci].entries)data[currentMonth][ci].entries=[];
-  data[currentMonth][ci].entries.push({date,memo,amt});
-  data[currentMonth][ci].entries.sort((a,b)=>a.date.localeCompare(b.date));
-  data[currentMonth][ci]._open=true; save(); render();
-}
-function delEntry(ci,ei) { if(!confirm('삭제할까요?'))return; data[currentMonth][ci].entries.splice(ei,1); save(); render(); }
-function openAddClient() { editingClientId=null; document.getElementById('modalTitle').textContent='클라이언트 추가'; document.getElementById('mName').value=''; document.getElementById('mBudget').value=''; document.getElementById('modalBg').classList.add('show'); setTimeout(()=>document.getElementById('mName').focus(),50); }
-function openEditClient(idx) { editingClientId=idx; const c=data[currentMonth][idx]; document.getElementById('modalTitle').textContent='클라이언트 수정'; document.getElementById('mName').value=c.name; document.getElementById('mBudget').value=c.budget; document.getElementById('modalBg').classList.add('show'); setTimeout(()=>document.getElementById('mName').focus(),50); }
-function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
-function saveClient() {
-  const name=document.getElementById('mName').value.trim();
-  const budget=+document.getElementById('mBudget').value;
-  if(!name){alert('클라이언트명을 입력해주세요.');return;}
-  if(!budget||budget<=0){alert('예산을 입력해주세요.');return;}
-  if(!data[currentMonth])data[currentMonth]=[];
-  if(editingClientId!==null){data[currentMonth][editingClientId].name=name;data[currentMonth][editingClientId].budget=budget;}
-  else data[currentMonth].push({name,budget,entries:[],_open:false});
-  save(); closeModal(); render();
-}
-function deleteClient(idx) { if(!confirm(data[currentMonth][idx].name+' 클라이언트를 삭제할까요?'))return; data[currentMonth].splice(idx,1); save(); render(); }
-function exportCSV() {
-  const md=data[currentMonth]||[];
-  if(!md.length){alert('내보낼 데이터가 없습니다.');return;}
-  let rows=['\uFFEF클라이언트,날짜,메모,금액(원),할당예산(원)'];
-  md.forEach(c=>{
-    (c.entries||[]).forEach(e=>rows.push([c.name,e.date,e.memo||'',e.amt,c.budget].join(',')));
-    if(!(c.entries||[]).length)rows.push([c.name,'','',0,c.budget].join(','));
+// ── 클라이언트 ───────────────────────────────────────────────────
+window.openAddClient = () => {
+  editingClientId = null;
+  document.getElementById('modalTitle').textContent = '클라이언트 추가';
+  document.getElementById('mName').value = '';
+  document.getElementById('mBudget').value = '';
+  document.getElementById('modalBg').classList.add('show');
+  setTimeout(() => document.getElementById('mName').focus(), 50);
+};
+
+window._openEditClient = id => {
+  editingClientId = id;
+  const c = clients.find(x => x.id === id);
+  document.getElementById('modalTitle').textContent = '클라이언트 수정';
+  document.getElementById('mName').value   = c.name;
+  document.getElementById('mBudget').value = c.budget;
+  document.getElementById('modalBg').classList.add('show');
+  setTimeout(() => document.getElementById('mName').focus(), 50);
+};
+
+window.closeModal = () => document.getElementById('modalBg').classList.remove('show');
+
+window.saveClient = async () => {
+  const name   = document.getElementById('mName').value.trim();
+  const budget = +document.getElementById('mBudget').value;
+  if (!name)           { alert('클라이언트명을 입력해주세요.'); return; }
+  if (!budget||budget<=0) { alert('예산을 입력해주세요.'); return; }
+  setStatus('syncing', '저장 중...');
+  try {
+    if (editingClientId) {
+      await updateDoc(doc(db,'months',currentMonth,'clients',editingClientId), { name, budget });
+    } else {
+      const id = uid();
+      await setDoc(doc(db,'months',currentMonth,'clients',id), {
+        name, budget, order: clients.length, _open: false
+      });
+    }
+    window.closeModal();
+  } catch { setStatus('error', '저장 실패'); }
+};
+
+window._deleteClient = async (id, name) => {
+  if (!confirm(`${name} 클라이언트를 삭제할까요?\n지출 내역도 모두 삭제됩니다.`)) return;
+  setStatus('syncing', '삭제 중...');
+  try {
+    const snap = await getDocs(collection(db,'months',currentMonth,'clients',id,'entries'));
+    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    await deleteDoc(doc(db,'months',currentMonth,'clients',id));
+    delete entries[id];
+  } catch { setStatus('error', '삭제 실패'); }
+};
+
+window._toggle = async id => {
+  const c = clients.find(x => x.id===id);
+  if (!c) return;
+  await updateDoc(doc(db,'months',currentMonth,'clients',id), { _open: !c._open });
+};
+
+// ── 지출 ─────────────────────────────────────────────────────────
+window._addEntry = async clientId => {
+  const date = document.getElementById(`eD_${clientId}`).value;
+  const memo = document.getElementById(`eM_${clientId}`).value.trim();
+  const amt  = +document.getElementById(`eA_${clientId}`).value;
+  if (!date||!amt||amt<=0) { alert('날짜와 금액을 입력해주세요.'); return; }
+  setStatus('syncing', '저장 중...');
+  try {
+    await setDoc(doc(db,'months',currentMonth,'clients',clientId,'entries',uid()), { date, memo, amt });
+    document.getElementById(`eA_${clientId}`).value = '';
+    document.getElementById(`eM_${clientId}`).value = '';
+  } catch { setStatus('error', '저장 실패'); }
+};
+
+window._startEdit = (clientId, ei, entryId) => {
+  editingEntryKey = `${clientId}_${ei}`;
+  render();
+  document.getElementById(`ed_d_${editingEntryKey}`)?.focus();
+};
+
+window._cancelEdit = () => { editingEntryKey = null; render(); };
+
+window._saveEntry = async (clientId, entryId, ek) => {
+  const date = document.getElementById(`ed_d_${ek}`).value;
+  const memo = document.getElementById(`ed_m_${ek}`).value.trim();
+  const amt  = +document.getElementById(`ed_a_${ek}`).value;
+  if (!date||!amt||amt<=0) { alert('날짜와 금액을 입력해주세요.'); return; }
+  setStatus('syncing', '저장 중...');
+  try {
+    await updateDoc(doc(db,'months',currentMonth,'clients',clientId,'entries',entryId), { date, memo, amt });
+    editingEntryKey = null;
+  } catch { setStatus('error', '저장 실패'); }
+};
+
+window._delEntry = async (clientId, entryId) => {
+  if (!confirm('이 내역을 삭제할까요?')) return;
+  setStatus('syncing', '삭제 중...');
+  try {
+    await deleteDoc(doc(db,'months',currentMonth,'clients',clientId,'entries',entryId));
+  } catch { setStatus('error', '삭제 실패'); }
+};
+
+// ── CSV ──────────────────────────────────────────────────────────
+window.exportCSV = () => {
+  if (!clients.length) { alert('내보낼 데이터가 없습니다.'); return; }
+  let rows = ['\uFEFF클라이언트,날짜,메모,금액(원),할당예산(원)'];
+  clients.forEach(c => {
+    const ents = entries[c.id]||[];
+    ents.forEach(e => rows.push([c.name,e.date,e.memo||'',e.amt,c.budget].join(',')));
+    if (!ents.length) rows.push([c.name,'','',0,c.budget].join(','));
   });
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));
-  a.download=`광고비_${currentMonth}.csv`; a.click();
-}
-document.getElementById('modalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();cancelEdit();}});
-load(); initMonthSel(); render();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download = `광고비_${currentMonth}.csv`;
+  a.click();
+};
+
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target===e.currentTarget) window.closeModal(); });
+document.addEventListener('keydown', e => { if (e.key==='Escape') { window.closeModal(); window._cancelEdit(); } });
+
+initMonthSel();
+subscribeMonth();
 </script>
 </body>
 </html>
