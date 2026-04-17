@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>광고비 트래커</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+.container { max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 12px; }
+h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+.top-actions { display: flex; gap: 8px; align-items: center; }
+select { font-size: 14px; padding: 7px 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; cursor: pointer; outline: none; }
+select:focus { border-color: #1D9E75; }
+.btn { font-size: 13px; padding: 7px 16px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.btn:hover { background: #f0f0ee; }
+.btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+.btn-primary:hover { background: #333; }
+.btn-sm { font-size: 12px; padding: 5px 12px; }
+.btn-danger { color: #E24B4A; border-color: #fcc; }
+.btn-danger:hover { background: #fff5f5; }
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+.sum-card { background: #fff; border-radius: 10px; padding: 1rem 1.1rem; border: 1px solid #ebebea; }
+.sum-label { font-size: 12px; color: #888; margin-bottom: 5px; }
+.sum-val { font-size: 22px; font-weight: 600; }
+.clients { display: flex; flex-direction: column; gap: 10px; }
+.card { background: #fff; border: 1px solid #ebebea; border-radius: 12px; padding: 1.1rem 1.25rem; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.client-name { font-size: 15px; font-weight: 600; }
+.card-actions { display: flex; gap: 6px; }
+.icon-btn { background: none; border: none; cursor: pointer; color: #aaa; font-size: 15px; padding: 3px 7px; border-radius: 6px; transition: background 0.15s; }
+.icon-btn:hover { background: #f5f5f3; color: #555; }
+.icon-btn.del:hover { color: #E24B4A; background: #fff5f5; }
+.budget-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; font-size: 13px; color: #888; }
+.pct-label { font-weight: 600; }
+.pct-ok { color: #1D9E75; }
+.pct-warn { color: #EF9F27; }
+.pct-over { color: #E24B4A; }
+.bar-bg { width: 100%; height: 8px; background: #f0f0ee; border-radius: 99px; overflow: hidden; margin-bottom: 10px; }
+.bar-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+.bar-ok { background: #1D9E75; }
+.bar-warn { background: #EF9F27; }
+.bar-over { background: #E24B4A; }
+.toggle-link { font-size: 12px; color: #aaa; cursor: pointer; user-select: none; }
+.toggle-link:hover { color: #555; }
+.entries { display: none; margin-top: 12px; border-top: 1px solid #f0f0ee; padding-top: 12px; }
+.entries.open { display: block; }
+.entry-row { display: grid; grid-template-columns: 90px 1fr auto 28px 28px; align-items: center; gap: 6px; font-size: 13px; padding: 5px 0; border-bottom: 1px solid #f5f5f3; }
+.entry-row:last-child { border-bottom: none; }
+.e-date { color: #aaa; }
+.e-memo { color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.e-amt { font-weight: 600; text-align: right; }
+.edit-row { display: grid; grid-template-columns: 110px 1fr 100px auto auto; align-items: center; gap: 6px; padding: 6px 8px; background: #f8f8f6; border-radius: 8px; margin: 3px 0; }
+.edit-row input { font-size: 12px; padding: 5px 8px; border: 1px solid #ddd; border-radius: 6px; background: #fff; color: #1a1a1a; width: 100%; outline: none; }
+.edit-row input:focus { border-color: #1D9E75; }
+.add-row { display: grid; grid-template-columns: 110px 1fr 100px auto; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0ee; align-items: center; }
+.add-row input { font-size: 13px; padding: 6px 9px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #1a1a1a; width: 100%; outline: none; }
+.add-row input:focus { border-color: #1D9E75; }
+.empty { text-align: center; padding: 3rem 1rem; color: #aaa; font-size: 14px; line-height: 2; background: #fff; border-radius: 12px; border: 1px dashed #ddd; }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: center; justify-content: center; }
+.modal-bg.show { display: flex; }
+.modal { background: #fff; border-radius: 14px; padding: 1.5rem; width: 340px; max-width: 92vw; box-shadow: 0 8px 40px rgba(0,0,0,0.15); }
+.modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 1.1rem; }
+.modal label { font-size: 13px; color: #888; display: block; margin-bottom: 4px; }
+.modal input { width: 100%; font-size: 14px; padding: 8px 11px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; outline: none; }
+.modal input:focus { border-color: #1D9E75; }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+@media (max-width: 520px) {
+  .summary { grid-template-columns: repeat(3, 1fr); }
+  .sum-val { font-size: 16px; }
+  .add-row { grid-template-columns: 1fr 1fr; }
+  .add-row input:first-child { grid-column: 1; }
+  .add-row input:nth-child(2) { grid-column: 2; }
+  .add-row input:nth-child(3) { grid-column: 1; }
+  .add-row .btn { grid-column: 2; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>📊 광고비 트래커</h1>
+    <div class="top-actions">
+      <select id="monthSel"></select>
+      <button class="btn" onclick="exportCSV()">CSV</button>
+      <button class="btn btn-primary" onclick="openAddClient()">+ 추가</button>
+    </div>
+  </header>
+  <div class="summary">
+    <div class="sum-card"><div class="sum-label">총 할당 예산</div><div class="sum-val" id="sTotal">-</div></div>
+    <div class="sum-card"><div class="sum-label">총 소진액</div><div class="sum-val" id="sSpent">-</div></div>
+    <div class="sum-card"><div class="sum-label">총 잔여액</div><div class="sum-val" id="sRemain">-</div></div>
+  </div>
+  <div class="clients" id="clientList"></div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle">클라이언트 추가</h2>
+    <label>클라이언트명</label>
+    <input type="text" id="mName" placeholder="예: 삼성전자" />
+    <label>월 할당 예산 (원)</label>
+    <input type="number" id="mBudget" placeholder="예: 5000000" />
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveClient()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'adtracker_v3';
+let data = {}, currentMonth = '', editingClientId = null, editingEntryKey = null;
+
+const fmt = n => Number(n).toLocaleString('ko-KR') + '원';
+const pct = (s, b) => !b ? 0 : Math.min(100, Math.round(s / b * 100));
+const today = () => new Date().toISOString().slice(0, 10);
+const load = () => { try { data = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { data = {}; } };
+const save = () => localStorage.setItem(KEY, JSON.stringify(data));
+
+function getMonths() {
+  const now = new Date(), months = [];
+  for (let i = -3; i <= 4; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+  }
+  return months;
+}
+
+function initMonthSel() {
+  const sel = document.getElementById('monthSel');
+  const months = getMonths();
+  const now = new Date();
+  currentMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  sel.innerHTML = months.map(m => `<option value="${m}" ${m===currentMonth?'selected':''}>${m.replace('-','년 ')}월</option>`).join('');
+  sel.onchange = () => { currentMonth = sel.value; editingEntryKey = null; render(); };
+}
+
+function render() {
+  const md = data[currentMonth] || [];
+  let tb = 0, ts = 0;
+  md.forEach(c => { tb += +c.budget||0; ts += (c.entries||[]).reduce((a,e) => a+(+e.amt||0), 0); });
+  document.getElementById('sTotal').textContent = fmt(tb);
+  document.getElementById('sSpent').textContent = fmt(ts);
+  document.getElementById('sRemain').textContent = fmt(tb - ts);
+
+  const list = document.getElementById('clientList');
+  if (!md.length) { list.innerHTML = '<div class="empty">클라이언트가 없습니다.<br>오른쪽 상단 <strong>+ 추가</strong> 버튼으로 등록해보세요.</div>'; return; }
+
+  list.innerHTML = md.map((c, ci) => {
+    const spent = (c.entries||[]).reduce((a,e) => a+(+e.amt||0), 0);
+    const p = pct(spent, c.budget);
+    const cls = p>=100?'over':p>=80?'warn':'ok';
+    const eRows = (c.entries||[]).map((e, ei) => {
+      const ek = `${ci}_${ei}`;
+      if (editingEntryKey === ek) return `
+        <div class="edit-row">
+          <input type="date" id="ed_d_${ek}" value="${e.date}">
+          <input type="text" id="ed_m_${ek}" value="${e.memo||''}" placeholder="메모">
+          <input type="number" id="ed_a_${ek}" value="${e.amt}" min="0">
+          <button class="btn btn-primary btn-sm" onclick="saveEntry(${ci},${ei})">저장</button>
+          <button class="btn btn-sm" onclick="cancelEdit()">취소</button>
+        </div>`;
+      return `<div class="entry-row">
+        <span class="e-date">${e.date}</span>
+        <span class="e-memo">${e.memo||'-'}</span>
+        <span class="e-amt">${fmt(e.amt)}</span>
+        <button class="icon-btn" onclick="startEdit(${ci},${ei})" title="수정">✎</button>
+        <button class="icon-btn del" onclick="delEntry(${ci},${ei})" title="삭제">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="card">
+      <div class="card-header">
+        <span class="client-name">${c.name}</span>
+        <div class="card-actions">
+          <button class="icon-btn" onclick="openEditClient(${ci})">✎</button>
+          <button class="icon-btn del" onclick="deleteClient(${ci})">✕</button>
+        </div>
+      </div>
+      <div class="budget-row">
+        <span>소진 ${fmt(spent)} / 할당 ${fmt(c.budget)}</span>
+        <span class="pct-label pct-${cls}">${p}%</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill bar-${cls}" style="width:${p}%"></div></div>
+      <span class="toggle-link" onclick="toggleEntries(${ci})">${c._open?'▾':'▸'} 지출 내역 ${(c.entries||[]).length}건</span>
+      <div class="entries${c._open?' open':''}" id="ent_${ci}">
+        ${eRows||'<div style="font-size:13px;color:#aaa;padding:4px 0 8px;">내역 없음</div>'}
+        <div class="add-row">
+          <input type="date" id="eD_${ci}" value="${today()}">
+          <input type="text" id="eM_${ci}" placeholder="메모 (선택)">
+          <input type="number" id="eA_${ci}" placeholder="금액 (원)" min="0">
+          <button class="btn btn-primary btn-sm" onclick="addEntry(${ci})">+ 추가</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleEntries(ci) { data[currentMonth][ci]._open=!data[currentMonth][ci]._open; save(); render(); }
+function startEdit(ci,ei) { editingEntryKey=`${ci}_${ei}`; render(); document.getElementById(`ed_d_${editingEntryKey}`)?.focus(); }
+function cancelEdit() { editingEntryKey=null; render(); }
+function saveEntry(ci,ei) {
+  const ek=`${ci}_${ei}`;
+  const date=document.getElementById(`ed_d_${ek}`).value;
+  const memo=document.getElementById(`ed_m_${ek}`).value.trim();
+  const amt=+document.getElementById(`ed_a_${ek}`).value;
+  if(!date||!amt||amt<=0){alert('날짜와 금액을 입력해주세요.');return;}
+  data[currentMonth][ci].entries[ei]={date,memo,amt};
+  data[currentMonth][ci].entries.sort((a,b)=>a.date.localeCompare(b.date));
+  editingEntryKey=null; save(); render();
+}
+function addEntry(ci) {
+  const date=document.getElementById(`eD_${ci}`).value;
+  const memo=document.getElementById(`eM_${ci}`).value.trim();
+  const amt=+document.getElementById(`eA_${ci}`).value;
+  if(!date||!amt||amt<=0){alert('날짜와 금액을 입력해주세요.');return;}
+  if(!data[currentMonth][ci].entries)data[currentMonth][ci].entries=[];
+  data[currentMonth][ci].entries.push({date,memo,amt});
+  data[currentMonth][ci].entries.sort((a,b)=>a.date.localeCompare(b.date));
+  data[currentMonth][ci]._open=true; save(); render();
+}
+function delEntry(ci,ei) { if(!confirm('삭제할까요?'))return; data[currentMonth][ci].entries.splice(ei,1); save(); render(); }
+function openAddClient() { editingClientId=null; document.getElementById('modalTitle').textContent='클라이언트 추가'; document.getElementById('mName').value=''; document.getElementById('mBudget').value=''; document.getElementById('modalBg').classList.add('show'); setTimeout(()=>document.getElementById('mName').focus(),50); }
+function openEditClient(idx) { editingClientId=idx; const c=data[currentMonth][idx]; document.getElementById('modalTitle').textContent='클라이언트 수정'; document.getElementById('mName').value=c.name; document.getElementById('mBudget').value=c.budget; document.getElementById('modalBg').classList.add('show'); setTimeout(()=>document.getElementById('mName').focus(),50); }
+function closeModal() { document.getElementById('modalBg').classList.remove('show'); }
+function saveClient() {
+  const name=document.getElementById('mName').value.trim();
+  const budget=+document.getElementById('mBudget').value;
+  if(!name){alert('클라이언트명을 입력해주세요.');return;}
+  if(!budget||budget<=0){alert('예산을 입력해주세요.');return;}
+  if(!data[currentMonth])data[currentMonth]=[];
+  if(editingClientId!==null){data[currentMonth][editingClientId].name=name;data[currentMonth][editingClientId].budget=budget;}
+  else data[currentMonth].push({name,budget,entries:[],_open:false});
+  save(); closeModal(); render();
+}
+function deleteClient(idx) { if(!confirm(data[currentMonth][idx].name+' 클라이언트를 삭제할까요?'))return; data[currentMonth].splice(idx,1); save(); render(); }
+function exportCSV() {
+  const md=data[currentMonth]||[];
+  if(!md.length){alert('내보낼 데이터가 없습니다.');return;}
+  let rows=['\uFFEF클라이언트,날짜,메모,금액(원),할당예산(원)'];
+  md.forEach(c=>{
+    (c.entries||[]).forEach(e=>rows.push([c.name,e.date,e.memo||'',e.amt,c.budget].join(',')));
+    if(!(c.entries||[]).length)rows.push([c.name,'','',0,c.budget].join(','));
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download=`광고비_${currentMonth}.csv`; a.click();
+}
+document.getElementById('modalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();cancelEdit();}});
+load(); initMonthSel(); render();
+</script>
+</body>
+</html>
